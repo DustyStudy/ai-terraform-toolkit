@@ -1,8 +1,14 @@
 # account-baseline
 
 Applies the standard security baseline to a single AWS account: multi-region CloudTrail (KMS
-encrypted, log-file validation on), AWS Config, GuardDuty, and SCP attachment for org member
-accounts.
+encrypted, log-file validation on, delivered to both S3 and CloudWatch Logs, with SNS
+notifications), AWS Config (KMS-encrypted, versioned S3 delivery bucket), GuardDuty, a dedicated
+access-logs sink bucket, and SCP attachment for org member accounts.
+
+CloudTrail-to-CloudWatch-Logs delivery and AWS Config are always on — not optional — since this
+module is meant to establish the FedRAMP-aligned audit/logging baseline described in
+`COMPLIANCE.md`. GuardDuty remains toggleable (`enable_guardduty`) for cases like a sandbox
+account where it isn't needed.
 
 This module does **not** author SCP policy content — it only attaches existing SCPs (created in
 your org's management account) to the target account by policy ID.
@@ -13,10 +19,9 @@ your org's management account) to the target account by policy ID.
 module "account_baseline" {
   source = "../../modules/account-baseline"
 
-  name_prefix       = "acme"
-  account_id        = "123456789012"
-  enable_config     = true
-  enable_guardduty  = true
+  name_prefix      = "acme"
+  account_id       = "123456789012"
+  enable_guardduty = true
 
   attach_scp_ids = {
     deny_root_actions = "p-abc12345"
@@ -37,9 +42,7 @@ module "account_baseline" {
 |---|---|---|---|
 | `name_prefix` | Prefix for all resource names | `string` | n/a (required) |
 | `account_id` | Target account ID for SCP attachment | `string` | `""` |
-| `enable_cloudtrail_cloudwatch_logs` | Deliver CloudTrail logs to CloudWatch Logs too (near-real-time review) | `bool` | `true` |
-| `cloudtrail_log_retention_days` | CloudWatch Logs retention for CloudTrail log group | `number` | `90` |
-| `enable_config` | Enable AWS Config | `bool` | `true` |
+| `cloudtrail_log_retention_days` | CloudWatch Logs retention for CloudTrail log group | `number` | `365` |
 | `enable_guardduty` | Enable GuardDuty | `bool` | `true` |
 | `enable_eks_protection` | Enable GuardDuty EKS audit log protection | `bool` | `false` |
 | `attach_scp_ids` | Map of SCP policy IDs to attach | `map(string)` | `{}` |
@@ -51,15 +54,27 @@ module "account_baseline" {
 |---|---|
 | `cloudtrail_arn` | ARN of the CloudTrail trail |
 | `cloudtrail_bucket_name` | S3 bucket storing CloudTrail logs |
-| `config_bucket_name` | S3 bucket storing Config logs (if enabled) |
+| `config_bucket_name` | S3 bucket storing Config logs |
+| `access_logs_bucket_name` | S3 bucket storing access logs for the other buckets in this module |
+| `cloudtrail_sns_topic_arn` | SNS topic CloudTrail publishes log-delivery notifications to |
 | `guardduty_detector_id` | GuardDuty detector ID (if enabled) |
 
 ## Notes
 
 - Requires the caller to have organization-level permissions if `attach_scp_ids` is non-empty.
-- CloudTrail and Config each get their own dedicated, private, encrypted S3 bucket — this module
-  does not assume a pre-existing log-archive bucket, so it works standalone in a single account
-  or as part of a larger landing zone.
+- CloudTrail and Config each get their own dedicated, private, encrypted S3 bucket, both logging
+  access to a shared `access-logs` bucket also created by this module — this module does not
+  assume a pre-existing log-archive bucket, so it works standalone in a single account or as
+  part of a larger landing zone.
+- CloudTrail, Config, and CloudWatch Logs all share one customer-managed KMS key
+  (`aws_kms_key.logs`) rather than the AWS-managed default, with an explicit key policy —
+  see `COMPLIANCE.md` for why.
 - Works in both commercial AWS and GovCloud — AWS-managed policy ARNs use
   `data.aws_partition.current.partition` rather than being hardcoded to `arn:aws:...`.
+- Org-wide GuardDuty auto-enablement for new accounts (as opposed to enabling GuardDuty in this
+  one account) is a separate, org-level concern configured in the delegated administrator
+  account — out of scope for this module.
+- Cross-region replication for the buckets in this module is intentionally not built in — it
+  needs a pre-provisioned destination bucket and IAM role that are environment-specific. Add
+  `aws_s3_bucket_replication_configuration` in your root config if your org requires it.
 - See `COMPLIANCE.md` at the repo root for how this module's controls map to NIST 800-53.

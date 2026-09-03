@@ -9,22 +9,10 @@ variable "account_id" {
   default     = ""
 }
 
-variable "enable_cloudtrail_cloudwatch_logs" {
-  description = "Whether to deliver CloudTrail logs to CloudWatch Logs in addition to S3, for near-real-time log review/alerting (supports FedRAMP AU-6)."
-  type        = bool
-  default     = true
-}
-
 variable "cloudtrail_log_retention_days" {
-  description = "CloudWatch Logs retention period for the CloudTrail log group, if enabled. FedRAMP Moderate generally expects 90 days hot + 1 year total retention (cold storage can live in the S3 bucket instead)."
+  description = "CloudWatch Logs retention period for the CloudTrail log group. FedRAMP Moderate expects at least 1 year of retention; cold/long-term storage also lives indefinitely in the CloudTrail S3 bucket."
   type        = number
-  default     = 90
-}
-
-variable "enable_config" {
-  description = "Whether to enable AWS Config in this account."
-  type        = bool
-  default     = true
+  default     = 365
 }
 
 variable "enable_guardduty" {

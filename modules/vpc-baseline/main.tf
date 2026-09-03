@@ -3,7 +3,11 @@
 #
 # A VPC with public + private subnets across the given AZs, NAT gateway(s), flow logs to
 # CloudWatch, and a default security group with all rules stripped (per AWS best practice).
-###############################################
+############################################
+
+data "aws_region" "current" {}
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
 
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
@@ -115,8 +119,47 @@ resource "aws_route_table_association" "private" {
 resource "aws_cloudwatch_log_group" "flow_logs" {
   name              = "/vpc/${var.name_prefix}-flow-logs"
   retention_in_days = var.flow_log_retention_days
+  kms_key_id        = aws_kms_key.flow_logs.arn
 
   tags = var.tags
+}
+
+resource "aws_kms_key" "flow_logs" {
+  description             = "KMS key for ${var.name_prefix} VPC flow log encryption"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.flow_logs_kms.json
+
+  tags = var.tags
+}
+
+data "aws_iam_policy_document" "flow_logs_kms" {
+  statement {
+    sid    = "AllowRootAccountFullAccess"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    # checkov:skip=CKV_AWS_109: AWS's own documented default KMS key policy statement — grants
+    # the account's IAM policies control over the key (rotate, delete, update policy) so it
+    # stays manageable; not direct data-plane access. See account-baseline's logs_kms for the
+    # same rationale.
+    # checkov:skip=CKV_AWS_111: same rationale — key administration, not unconstrained write.
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudWatchLogsEncrypt"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logs.${data.aws_region.current.name}.amazonaws.com"]
+    }
+    actions   = ["kms:Encrypt*", "kms:Decrypt*", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:Describe*"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role" "flow_logs" {

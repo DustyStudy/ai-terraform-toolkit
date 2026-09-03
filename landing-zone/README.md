@@ -5,6 +5,10 @@ baseline (`modules/account-baseline`) and, optionally, a baseline VPC (`modules/
 
 Run this once per new account you bring into your org, authenticated against that account.
 
+CloudTrail (with CloudWatch Logs integration and SNS notification) and AWS Config are always
+applied by `account-baseline` — they aren't optional toggles, since they're the audit/logging
+baseline this toolkit is built around. Only GuardDuty and the optional VPC are configurable.
+
 ## Prerequisites
 
 1. **Remote state backend.** Create an S3 bucket (versioned, encrypted) and a DynamoDB table
@@ -59,5 +63,8 @@ See `variables.tf` for the full list. Key ones:
 | Name | Description |
 |---|---|
 | `cloudtrail_arn` | ARN of the account's CloudTrail trail |
+| `config_bucket_name` | S3 bucket storing AWS Config logs |
+| `access_logs_bucket_name` | S3 bucket storing access logs for the CloudTrail/Config buckets |
+| `cloudtrail_sns_topic_arn` | SNS topic CloudTrail publishes log-delivery notifications to |
 | `guardduty_detector_id` | GuardDuty detector ID |
 | `vpc_id` | VPC ID, if created |

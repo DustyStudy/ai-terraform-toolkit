@@ -43,7 +43,7 @@ module "vpc" {
 | `public_subnet_cidrs` | Map of AZ => CIDR for public subnets | `map(string)` | n/a (required) |
 | `private_subnet_cidrs` | Map of AZ => CIDR for private subnets | `map(string)` | n/a (required) |
 | `single_nat_gateway` | One shared NAT gateway vs. one per AZ | `bool` | `true` |
-| `flow_log_retention_days` | CloudWatch Logs retention for flow logs | `number` | `90` |
+| `flow_log_retention_days` | CloudWatch Logs retention for flow logs | `number` | `365` |
 | `tags` | Tags applied to all resources | `map(string)` | `{}` |
 
 ## Outputs
@@ -57,6 +57,8 @@ module "vpc" {
 
 ## Notes
 
+- Flow logs are encrypted with a dedicated customer-managed KMS key created by this module
+  (`aws_kms_key.flow_logs`), not CloudWatch's default encryption.
 - `single_nat_gateway = true` is cheaper but means all private subnets lose internet egress if
   that one NAT gateway's AZ has an outage. Use `false` for production workloads that need
   multi-AZ resilience.

@@ -9,8 +9,18 @@ output "cloudtrail_bucket_name" {
 }
 
 output "config_bucket_name" {
-  description = "Name of the S3 bucket storing AWS Config logs, if enabled."
-  value       = var.enable_config ? aws_s3_bucket.config[0].id : null
+  description = "Name of the S3 bucket storing AWS Config logs."
+  value       = aws_s3_bucket.config.id
+}
+
+output "access_logs_bucket_name" {
+  description = "Name of the S3 bucket storing access logs for the other buckets in this module."
+  value       = aws_s3_bucket.access_logs.id
+}
+
+output "cloudtrail_sns_topic_arn" {
+  description = "ARN of the SNS topic CloudTrail publishes log-delivery notifications to."
+  value       = aws_sns_topic.cloudtrail.arn
 }
 
 output "guardduty_detector_id" {

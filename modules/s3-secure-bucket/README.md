@@ -57,3 +57,15 @@ module "reports_bucket" {
 - If you're using this as the `access_log_bucket` target for another instance of this module,
   create the logging bucket first without an `access_log_bucket` of its own (avoid a logging
   cycle).
+- A lifecycle rule that aborts incomplete multipart uploads after 7 days is always applied,
+  regardless of `lifecycle_rules` — this isn't configurable, since there's no good reason to
+  leave abandoned multipart uploads accumulating storage cost.
+- EventBridge notifications are always enabled on the bucket (`aws_s3_bucket_notification` with
+  `eventbridge = true`), so downstream automation can react to object events without needing a
+  dedicated SNS/SQS/Lambda target wired up per bucket.
+- When this module creates its own KMS key (`kms_key_arn` left `null`), that key gets an
+  explicit policy (root administrative access + S3 service usage) rather than relying on an
+  implicit default.
+- Cross-region replication is intentionally not built in — see the same note in
+  `account-baseline`'s README. Add `aws_s3_bucket_replication_configuration` separately if
+  needed.

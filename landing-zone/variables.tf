@@ -14,12 +14,6 @@ variable "account_id" {
   type        = string
 }
 
-variable "enable_config" {
-  description = "Whether to enable AWS Config."
-  type        = bool
-  default     = true
-}
-
 variable "enable_guardduty" {
   description = "Whether to enable GuardDuty."
   type        = bool

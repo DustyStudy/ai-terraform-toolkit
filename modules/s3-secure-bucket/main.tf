@@ -5,12 +5,19 @@
 # access-logged to a separate bucket, and with an optional lifecycle policy.
 ############################################
 
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
 
   tags = merge(var.tags, {
     Name = var.bucket_name
   })
+
+  # checkov:skip=CKV_AWS_144: Cross-region replication needs a pre-provisioned destination
+  # bucket + IAM role that are environment-specific; not a sane default for a reusable module.
+  # Add aws_s3_bucket_replication_configuration in the calling root config if needed.
 }
 
 resource "aws_s3_bucket_public_access_block" "this" {
@@ -33,7 +40,38 @@ resource "aws_kms_key" "this" {
   description             = "KMS key for ${var.bucket_name}"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.kms_key_policy[0].json
   tags                    = var.tags
+}
+
+data "aws_iam_policy_document" "kms_key_policy" {
+  count = var.kms_key_arn == null ? 1 : 0
+
+  statement {
+    sid    = "AllowRootAccountFullAccess"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    # checkov:skip=CKV_AWS_109: AWS's own documented default KMS key policy statement — grants
+    # the account's IAM policies control over the key so it stays manageable/rotatable, not
+    # direct data access.
+    # checkov:skip=CKV_AWS_111: same rationale — key administration, not unconstrained write.
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowS3Encrypt"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+    actions   = ["kms:Encrypt*", "kms:Decrypt*", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:Describe*"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
@@ -57,8 +95,18 @@ resource "aws_s3_bucket_logging" "this" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "this" {
-  count  = length(var.lifecycle_rules) > 0 ? 1 : 0
   bucket = aws_s3_bucket.this.id
+
+  # Always present, regardless of user-supplied lifecycle_rules, so incomplete multipart
+  # uploads don't accumulate storage cost/clutter indefinitely.
+  rule {
+    id     = "abort-incomplete-multipart-uploads"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 
   dynamic "rule" {
     for_each = var.lifecycle_rules
@@ -82,6 +130,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
       }
     }
   }
+}
+
+resource "aws_s3_bucket_notification" "this" {
+  bucket      = aws_s3_bucket.this.id
+  eventbridge = true
 }
 
 data "aws_iam_policy_document" "deny_insecure_transport" {

@@ -41,7 +41,6 @@ module "account_baseline" {
 
   name_prefix      = var.name_prefix
   account_id       = var.account_id
-  enable_config    = var.enable_config
   enable_guardduty = var.enable_guardduty
   attach_scp_ids   = var.attach_scp_ids
 
