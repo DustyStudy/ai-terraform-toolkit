@@ -24,6 +24,31 @@ designed to be driven by AI coding assistants (Claude Code, Gemini) as much as b
 7. **Every new resource type should go through a module**, not be written inline in a root config,
    so it's reusable. If asked for something one-off, still suggest a module if it's likely to
    recur.
+8. **Never hardcode `arn:aws:...`** for AWS-managed resources. Use
+   `data.aws_partition.current.partition` (`"arn:${data.aws_partition.current.partition}:..."`)
+   so modules work in both commercial AWS and GovCloud — required for FedRAMP compatibility.
+9. **Any new logging/audit resource (CloudTrail, Config, VPC Flow Logs, etc.) must be encrypted
+   with a customer-managed KMS key**, not the AWS-managed default, and must have a retention
+   period set explicitly — never leave it at the provider default.
+10. **Check `COMPLIANCE.md` when adding or changing a module.** If the change affects what
+    control family it supports (or stops supporting), update the mapping table in the same PR.
+
+## FedRAMP / compliance posture
+
+This repo is built to support a FedRAMP Moderate baseline (NIST 800-53). Practically, that means:
+
+- Default to the *most* secure option, not the cheapest or simplest, when there's a tradeoff —
+  e.g. prefer KMS over SSE-S3, prefer a dedicated NAT gateway per AZ over a single shared one for
+  anything beyond dev/sandbox, prefer explicit deny statements over relying on defaults.
+- Every new module needs an entry in `COMPLIANCE.md`'s control mapping table — don't skip this
+  even for something that feels minor.
+- If a request would weaken an existing control (e.g. "just disable versioning on this bucket",
+  "turn off log file validation to save cost"), don't do it silently — flag the compliance
+  impact explicitly and ask for confirmation.
+- CI runs Checkov, Trivy, Terrascan, and Gitleaks on every PR (see `.github/workflows/ci.yml`).
+  A red CI run on a security finding is not something to work around with `soft_fail` or a skip
+  comment — fix the underlying resource, or escalate to the user if the finding is a genuine
+  false positive that needs a documented, reviewed exception.
 
 ## Repo structure
 

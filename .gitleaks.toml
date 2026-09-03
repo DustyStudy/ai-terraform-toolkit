@@ -1,0 +1,21 @@
+title = "ai-terraform-toolkit gitleaks config"
+
+[extend]
+# Start from gitleaks' maintained default ruleset (AWS keys, generic API keys/tokens, private
+# keys, etc.) and layer repo-specific exceptions on top rather than replacing it.
+useDefault = true
+
+[allowlist]
+description = "Known false-positive patterns for this repo"
+paths = [
+  '''landing-zone/terraform\.tfvars\.example$''',
+  '''\.terraform/.*''',
+]
+
+regexes = [
+  # Example/placeholder account IDs and ARNs used in module READMEs and examples — not real
+  # credentials, just documentation.
+  '''123456789012''',
+  '''p-abc12345''',
+  '''p-def67890''',
+]

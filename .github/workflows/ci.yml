@@ -1,10 +1,15 @@
-name: Terraform CI
+name: Terraform CI & Security Scanning
 
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+  schedule:
+    # Weekly scan even with no code changes — catches newly disclosed CVEs/misconfig rules
+    # in the scanners themselves, and new secret-scanning signatures.
+    - cron: "0 13 * * 1"
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -61,16 +66,102 @@ jobs:
           done
 
   checkov:
-    name: checkov
+    name: checkov (policy-as-code)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run Checkov
+        id: checkov
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
-          quiet: true
+          output_format: cli,sarif
+          output_file_path: console,checkov-results.sarif
+          config_file: .checkov.yaml
           soft_fail: false
+
+      - name: Upload Checkov SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
+
+  trivy-config:
+    name: trivy (misconfig scan)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: "CRITICAL,HIGH,MEDIUM"
+          exit-code: "1"
+
+      - name: Upload Trivy SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-config
+
+  terrascan:
+    name: terrascan (policy compliance)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Terrascan
+        id: terrascan
+        uses: tenable/terrascan-action@main
+        with:
+          iac_type: terraform
+          iac_dir: .
+          policy_type: aws
+          only_warn: false
+          sarif_upload: true
+
+      - name: Upload Terrascan SARIF to Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: terrascan.sarif
+          category: terrascan
+
+  gitleaks:
+    name: gitleaks (secret scanning)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
+          GITLEAKS_ENABLE_SUMMARY: true

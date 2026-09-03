@@ -1,0 +1,21 @@
+# Checkov configuration — see https://www.checkov.io/2.Basics/Configuration%20Options.html
+#
+# Philosophy: default-deny. Nothing is skipped unless it's genuinely a false positive for this
+# repo's design (documented inline below) — never skip a check just because it's noisy.
+
+framework:
+  - terraform
+
+compact: true
+quiet: false
+
+# Fail the build on any FAILED check at these severities. Adjust only if you have a documented
+# risk acceptance process — don't loosen this to make CI pass faster.
+hard-fail-on:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+
+# If you need to skip a check, add its ID below with a comment explaining why, a link to the
+# accepted-risk ticket/record, and a review/expiry date. None are skipped by default.
+skip-check: []

@@ -7,6 +7,7 @@
 
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
+data "aws_partition" "current" {}
 
 ############################################
 # CloudTrail
@@ -20,11 +21,61 @@ resource "aws_cloudtrail" "this" {
   enable_log_file_validation    = true
   kms_key_id                    = aws_kms_key.cloudtrail.arn
 
+  cloud_watch_logs_group_arn = var.enable_cloudtrail_cloudwatch_logs ? "${aws_cloudwatch_log_group.cloudtrail[0].arn}:*" : null
+  cloud_watch_logs_role_arn  = var.enable_cloudtrail_cloudwatch_logs ? aws_iam_role.cloudtrail_cloudwatch[0].arn : null
+
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-org-trail"
   })
 
   depends_on = [aws_s3_bucket_policy.cloudtrail]
+}
+
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  count             = var.enable_cloudtrail_cloudwatch_logs ? 1 : 0
+  name              = "/aws/cloudtrail/${var.name_prefix}-org-trail"
+  retention_in_days = var.cloudtrail_log_retention_days
+  kms_key_id        = aws_kms_key.cloudtrail.arn
+
+  tags = var.tags
+}
+
+resource "aws_iam_role" "cloudtrail_cloudwatch" {
+  count              = var.enable_cloudtrail_cloudwatch_logs ? 1 : 0
+  name               = "${var.name_prefix}-cloudtrail-cwl-role"
+  assume_role_policy = data.aws_iam_policy_document.cloudtrail_cloudwatch_assume[0].json
+  tags               = var.tags
+}
+
+data "aws_iam_policy_document" "cloudtrail_cloudwatch_assume" {
+  count = var.enable_cloudtrail_cloudwatch_logs ? 1 : 0
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "cloudtrail_cloudwatch" {
+  count  = var.enable_cloudtrail_cloudwatch_logs ? 1 : 0
+  name   = "${var.name_prefix}-cloudtrail-cwl-delivery"
+  role   = aws_iam_role.cloudtrail_cloudwatch[0].id
+  policy = data.aws_iam_policy_document.cloudtrail_cloudwatch_delivery[0].json
+}
+
+data "aws_iam_policy_document" "cloudtrail_cloudwatch_delivery" {
+  count = var.enable_cloudtrail_cloudwatch_logs ? 1 : 0
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    resources = ["${aws_cloudwatch_log_group.cloudtrail[0].arn}:*"]
+  }
 }
 
 resource "aws_s3_bucket" "cloudtrail" {
@@ -100,10 +151,49 @@ resource "aws_kms_key" "cloudtrail" {
   description             = "KMS key for ${var.name_prefix} CloudTrail log encryption"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.cloudtrail_kms.json
 
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-cloudtrail-kms"
   })
+}
+
+data "aws_iam_policy_document" "cloudtrail_kms" {
+  statement {
+    sid    = "AllowRootAccountFullAccess"
+    effect = "Allow"
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudTrailEncrypt"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+    actions   = ["kms:GenerateDataKey*", "kms:DescribeKey"]
+    resources = ["*"]
+  }
+
+  dynamic "statement" {
+    for_each = var.enable_cloudtrail_cloudwatch_logs ? [1] : []
+    content {
+      sid    = "AllowCloudWatchLogsEncrypt"
+      effect = "Allow"
+      principals {
+        type        = "Service"
+        identifiers = ["logs.${data.aws_region.current.name}.amazonaws.com"]
+      }
+      actions   = ["kms:Encrypt*", "kms:Decrypt*", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:Describe*"]
+      resources = ["*"]
+    }
+  }
 }
 
 ############################################
@@ -188,7 +278,7 @@ data "aws_iam_policy_document" "config_assume" {
 resource "aws_iam_role_policy_attachment" "config" {
   count      = var.enable_config ? 1 : 0
   role       = aws_iam_role.config[0].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWS_ConfigRole"
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWS_ConfigRole"
 }
 
 resource "aws_iam_role_policy" "config_s3" {

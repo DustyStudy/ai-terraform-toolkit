@@ -37,6 +37,8 @@ module "account_baseline" {
 |---|---|---|---|
 | `name_prefix` | Prefix for all resource names | `string` | n/a (required) |
 | `account_id` | Target account ID for SCP attachment | `string` | `""` |
+| `enable_cloudtrail_cloudwatch_logs` | Deliver CloudTrail logs to CloudWatch Logs too (near-real-time review) | `bool` | `true` |
+| `cloudtrail_log_retention_days` | CloudWatch Logs retention for CloudTrail log group | `number` | `90` |
 | `enable_config` | Enable AWS Config | `bool` | `true` |
 | `enable_guardduty` | Enable GuardDuty | `bool` | `true` |
 | `enable_eks_protection` | Enable GuardDuty EKS audit log protection | `bool` | `false` |
@@ -58,3 +60,6 @@ module "account_baseline" {
 - CloudTrail and Config each get their own dedicated, private, encrypted S3 bucket — this module
   does not assume a pre-existing log-archive bucket, so it works standalone in a single account
   or as part of a larger landing zone.
+- Works in both commercial AWS and GovCloud — AWS-managed policy ARNs use
+  `data.aws_partition.current.partition` rather than being hardcoded to `arn:aws:...`.
+- See `COMPLIANCE.md` at the repo root for how this module's controls map to NIST 800-53.

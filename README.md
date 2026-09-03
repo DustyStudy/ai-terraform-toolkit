@@ -23,6 +23,7 @@ existing code without fully understanding it. This repo tries to close that gap 
 ai-terraform-toolkit/
 ├── CLAUDE.md                    # Context file read by Claude Code
 ├── GEMINI.md                    # Context file read by Gemini CLI / Code Assist
+├── COMPLIANCE.md                # NIST 800-53 / FedRAMP control mapping
 ├── modules/
 │   ├── account-baseline/        # CloudTrail, Config, GuardDuty, SCP attachment for one account
 │   ├── s3-secure-bucket/        # Encrypted, logged, access-blocked S3 bucket
@@ -32,7 +33,10 @@ ai-terraform-toolkit/
 ├── .claude/
 │   ├── commands/                # Slash commands for common requests
 │   └── agents/                  # tf-security-reviewer subagent
-└── .github/workflows/ci.yml     # fmt, validate, tflint, Checkov on every PR
+├── .checkov.yaml                # Checkov scan configuration
+├── .gitleaks.toml                # Gitleaks secret-scanning configuration
+├── .tflint.hcl                  # tflint configuration (AWS ruleset)
+└── .github/workflows/ci.yml     # fmt, validate, tflint, Checkov, Trivy, Terrascan, Gitleaks
 ```
 
 ## Getting started
@@ -57,8 +61,19 @@ ai-terraform-toolkit/
 
 ## Security scanning
 
-Every PR runs `terraform fmt -check`, `terraform validate`, `tflint`, and [Checkov](https://www.checkov.io/)
-via GitHub Actions. See `.github/workflows/ci.yml`.
+Every PR, every push to `main`, and a weekly scheduled run all execute:
+
+- `terraform fmt -check` / `terraform validate`
+- `tflint` with the AWS ruleset
+- **Checkov** — broad IaC policy-as-code checks
+- **Trivy** (config scan) — misconfigurations with CVE-aware severity
+- **Terrascan** — additional policy-as-code coverage, cross-checking Checkov
+- **Gitleaks** — secret scanning across the repo and git history
+
+All scanner results are uploaded as SARIF to GitHub's **Security tab**, so findings are tracked
+centrally instead of buried in workflow logs. See `.github/workflows/ci.yml`, `.checkov.yaml`,
+`.tflint.hcl`, and `.gitleaks.toml` for configuration, and `COMPLIANCE.md` for how this maps to
+NIST 800-53 / FedRAMP control families.
 
 ## License
 
