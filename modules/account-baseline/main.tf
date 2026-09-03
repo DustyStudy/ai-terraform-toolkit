@@ -310,13 +310,14 @@ resource "aws_s3_bucket_versioning" "access_logs" {
   }
 }
 
+# trivy:ignore:AVD-AWS-0132 AWS does not support SSE-KMS for S3 server-access-log target
+# buckets, only SSE-S3 — this is a hard AWS platform constraint, not a design choice. Same
+# rationale as the CKV_AWS_145 skip below.
 resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
   bucket = aws_s3_bucket.access_logs.id
 
   # checkov:skip=CKV_AWS_145: S3 server access logging requires the target bucket to use
   # SSE-S3 — AWS does not support SSE-KMS for log-delivery target buckets.
-  # trivy:ignore:AVD-AWS-0132 Same rationale — AWS does not support SSE-KMS for S3
-  # server-access-log target buckets, only SSE-S3. This is a hard AWS platform constraint.
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
