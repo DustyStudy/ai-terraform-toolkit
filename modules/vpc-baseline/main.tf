@@ -3,7 +3,7 @@
 #
 # A VPC with public + private subnets across the given AZs, NAT gateway(s), flow logs to
 # CloudWatch, and a default security group with all rules stripped (per AWS best practice).
-############################################
+###############################################
 
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
