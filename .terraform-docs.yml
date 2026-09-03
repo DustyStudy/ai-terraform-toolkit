@@ -1,0 +1,29 @@
+formatter: "markdown table"
+
+# Only replace the content between the markers below — everything else in each README
+# (usage examples, notes, prose) is left untouched.
+content: |-
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+sort:
+  enabled: true
+  by: name
+
+settings:
+  indent: 2
+  anchor: false
+  color: true
+  default: true
+  description: true
+  required: true
+  type: true

@@ -23,3 +23,8 @@ Thumbs.db
 # Checkov / tflint local output
 .checkov.yaml.bak
 .tflint.d/
+
+# Infracost / drift-detection local runs
+infracost-*.json
+drift.tfplan
+drift-plan.txt

@@ -65,6 +65,30 @@ jobs:
             (cd "$dir" && tflint --format compact)
           done
 
+  terraform-docs-check:
+    name: terraform-docs (README freshness)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup terraform-docs
+        run: |
+          curl -sSLo terraform-docs.tar.gz https://terraform-docs.io/dl/v0.19.0/terraform-docs-v0.19.0-$(uname | tr '[:upper:]' '[:lower:]')-amd64.tar.gz
+          tar -xzf terraform-docs.tar.gz terraform-docs
+          chmod +x terraform-docs
+          sudo mv terraform-docs /usr/local/bin/
+
+      - name: Regenerate docs and check for drift
+        run: |
+          for dir in modules/*/ landing-zone/ bootstrap/; do
+            terraform-docs --config .terraform-docs.yml "$dir"
+          done
+          if ! git diff --exit-code -- '**/README.md'; then
+            echo "::error::Generated docs are out of date. Run 'pre-commit run terraform_docs --all-files' locally and commit the result."
+            exit 1
+          fi
+
   checkov:
     name: checkov (policy-as-code)
     runs-on: ubuntu-latest
@@ -180,3 +204,68 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
           GITLEAKS_ENABLE_SUMMARY: true
+
+  infracost:
+    name: infracost (cost estimate)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Requires a free API key from https://www.infracost.io/ stored as the INFRACOST_API_KEY
+      # repo secret. Without it, this job is skipped entirely rather than failing the build —
+      # cost estimation is a nice-to-have, not a merge gate.
+      - name: Check for Infracost API key
+        id: check_key
+        run: |
+          if [ -n "${{ secrets.INFRACOST_API_KEY }}" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Infracost
+        if: steps.check_key.outputs.has_key == 'true'
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Checkout base branch
+        if: steps.check_key.outputs.has_key == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: "${{ github.event.pull_request.base.ref }}"
+          path: base
+
+      - name: Generate Infracost cost baseline
+        if: steps.check_key.outputs.has_key == 'true'
+        run: |
+          infracost breakdown --path=base/landing-zone \
+            --terraform-var-file=terraform.tfvars.example \
+            --terraform-init-flags="-backend=false" \
+            --format=json --out-file=infracost-base.json
+
+      - name: Checkout PR branch
+        if: steps.check_key.outputs.has_key == 'true'
+        uses: actions/checkout@v4
+        with:
+          path: pr
+
+      - name: Generate Infracost cost diff
+        if: steps.check_key.outputs.has_key == 'true'
+        run: |
+          infracost diff --path=pr/landing-zone \
+            --terraform-var-file=terraform.tfvars.example \
+            --terraform-init-flags="-backend=false" \
+            --format=json --compare-to=infracost-base.json \
+            --out-file=infracost-diff.json
+
+      - name: Post cost estimate comment
+        if: steps.check_key.outputs.has_key == 'true'
+        run: |
+          infracost comment github --path=infracost-diff.json \
+            --repo="$GITHUB_REPOSITORY" \
+            --github-token="${{ github.token }}" \
+            --pull-request="${{ github.event.pull_request.number }}" \
+            --behavior=update

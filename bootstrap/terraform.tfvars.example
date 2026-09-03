@@ -1,0 +1,11 @@
+# Copy this to terraform.tfvars and fill in real values.
+
+aws_region  = "us-east-1"
+name_prefix = "acme"
+
+tags = {
+  Environment = "shared"
+  Owner       = "platform-team"
+  ManagedBy   = "terraform"
+  CostCenter  = "eng-infra"
+}

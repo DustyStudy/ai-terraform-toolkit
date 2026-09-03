@@ -1,0 +1,125 @@
+name: Drift Detection
+
+# Runs a read-only `terraform plan` against the deployed landing-zone on a schedule and opens
+# (or updates) a GitHub issue if the deployed infrastructure has drifted from what's in Git —
+# e.g. someone made a manual console change, or an SCP got edited outside Terraform.
+#
+# TEMPLATE NOTE: this workflow needs environment-specific configuration before it does anything
+# useful — it's inert (skips itself) until AWS_ROLE_ARN is set, by design, so forking this repo
+# doesn't immediately start failing CI runs against an AWS account that doesn't exist. To wire
+# it up for your account(s):
+#   1. Set up an IAM OIDC identity provider + role in the target AWS account, trusting this repo
+#      (see landing-zone/README.md's OIDC prerequisite).
+#   2. Add that role's ARN as the repo secret AWS_ROLE_ARN.
+#   3. Add your backend bucket/table/region as repo variables: TF_BACKEND_BUCKET,
+#      TF_BACKEND_TABLE, TF_BACKEND_REGION.
+#   4. Provide real tfvars for the account being checked — either commit a non-secret tfvars
+#      file for this purpose, or store one as the repo secret LANDING_ZONE_TFVARS (written to
+#      disk in the step below) if it contains anything sensitive.
+#   5. If you manage multiple accounts, turn this into a matrix job — one plan per account.
+
+on:
+  schedule:
+    - cron: "0 14 * * *" # daily; adjust to taste
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  drift-check:
+    name: drift check (landing-zone)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for OIDC AWS auth
+      issues: write # to open/update/close the drift issue
+    steps:
+      - name: Check for required configuration
+        id: check_config
+        run: |
+          if [ -n "${{ secrets.AWS_ROLE_ARN }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Drift detection skipped — AWS_ROLE_ARN secret not set. See the comment at the top of this workflow file to configure it."
+          fi
+
+      - name: Checkout
+        if: steps.check_config.outputs.configured == 'true'
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        if: steps.check_config.outputs.configured == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.TF_BACKEND_REGION || 'us-east-1' }}
+
+      - name: Setup Terraform
+        if: steps.check_config.outputs.configured == 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Write tfvars from secret (if provided)
+        if: steps.check_config.outputs.configured == 'true' && secrets.LANDING_ZONE_TFVARS != ''
+        run: echo "${{ secrets.LANDING_ZONE_TFVARS }}" > landing-zone/drift-check.auto.tfvars
+
+      - name: Terraform init
+        if: steps.check_config.outputs.configured == 'true'
+        working-directory: landing-zone
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_BACKEND_BUCKET }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_BACKEND_TABLE }}" \
+            -backend-config="region=${{ vars.TF_BACKEND_REGION || 'us-east-1' }}"
+
+      - name: Terraform plan (detect drift)
+        if: steps.check_config.outputs.configured == 'true'
+        id: plan
+        working-directory: landing-zone
+        run: |
+          set +e
+          terraform plan -detailed-exitcode -no-color -out=drift.tfplan
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Show plan (if drift detected)
+        if: steps.check_config.outputs.configured == 'true' && steps.plan.outputs.exit_code == '2'
+        working-directory: landing-zone
+        run: terraform show -no-color drift.tfplan > drift-plan.txt
+
+      - name: Open or update drift issue
+        if: steps.check_config.outputs.configured == 'true' && steps.plan.outputs.exit_code == '2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PLAN_BODY=$(head -c 60000 landing-zone/drift-plan.txt) # stay under GitHub's issue-body limit
+          EXISTING=$(gh issue list --search "Drift detected in landing-zone in:title" --state open --json number --jq '.[0].number')
+          BODY="## Drift detected
+
+          A scheduled \`terraform plan\` found differences between the deployed landing-zone infrastructure and what's in Git (run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+          \`\`\`
+          $PLAN_BODY
+          \`\`\`
+
+          Investigate whether this was an intentional manual change (import it or revert it) or a real drift that needs \`terraform apply\`."
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "Drift detected in landing-zone" --body "$BODY" --label "drift"
+          fi
+
+      - name: Close drift issue (if no drift)
+        if: steps.check_config.outputs.configured == 'true' && steps.plan.outputs.exit_code == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXISTING=$(gh issue list --search "Drift detected in landing-zone in:title" --state open --json number --jq '.[0].number')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Latest scheduled plan (run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) found no drift. Closing."
+            gh issue close "$EXISTING"
+          fi
