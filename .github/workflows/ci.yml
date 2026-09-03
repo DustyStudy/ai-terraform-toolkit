@@ -103,16 +103,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Trivy config scan (human-readable log output)
+      - name: Run Trivy config scan (human-readable log output + build gate)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: config
           scan-ref: .
           format: table
           severity: "CRITICAL,HIGH,MEDIUM"
-          exit-code: "0" # informational only — the SARIF step below is what gates the build
+          exit-code: "1" # this step's severity filtering is reliable — it gates the build
 
-      - name: Run Trivy config scan (SARIF for Security tab + build gate)
+      - name: Run Trivy config scan (SARIF for Security tab)
+        # Always runs, even if the step above failed the job, so the Security tab still gets
+        # populated. exit-code is "0" here deliberately: Trivy's SARIF builder ignores the
+        # severity filter for its own exit-code decision (it evaluates all severities, not just
+        # the ones passed via `severity`), so this step can't be trusted to gate the build — the
+        # table step above is the real, severity-accurate gate.
+        if: always()
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: config
@@ -120,7 +126,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: "CRITICAL,HIGH,MEDIUM"
-          exit-code: "1"
+          exit-code: "0"
 
       - name: Upload Trivy SARIF to Security tab
         if: always()
