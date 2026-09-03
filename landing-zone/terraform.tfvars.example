@@ -1,0 +1,30 @@
+# Copy this file to terraform.tfvars (or pass via -var-file) and fill in real values.
+# terraform.tfvars is gitignored — never commit real account IDs/config if this repo is public
+# and you're using it for a private org, or do so intentionally if that's fine for your use case.
+
+aws_region  = "us-east-1"
+name_prefix = "acme-prod"
+account_id  = "123456789012"
+
+enable_config    = true
+enable_guardduty = true
+
+attach_scp_ids = {
+  # deny_root_actions = "p-abc12345"
+}
+
+create_vpc = false
+# vpc_cidr = "10.0.0.0/16"
+# public_subnet_cidrs = {
+#   "us-east-1a" = "10.0.0.0/24"
+# }
+# private_subnet_cidrs = {
+#   "us-east-1a" = "10.0.10.0/24"
+# }
+
+tags = {
+  Environment = "prod"
+  Owner       = "platform-team"
+  ManagedBy   = "terraform"
+  CostCenter  = "eng-infra"
+}
