@@ -197,9 +197,10 @@ data "aws_iam_policy_document" "flow_logs_permissions" {
       "logs:DescribeLogStreams",
     ]
 
-    # trivy:ignore:AVD-AWS-0057 Same rationale as account-baseline's cloudtrail_cloudwatch_delivery:
-    # the ":*" suffix is the standard AWS pattern for "all log streams within this specific,
-    # named log group" — stream names are dynamic and can't be enumerated in advance.
+    # Same rationale as account-baseline's cloudtrail_cloudwatch_delivery: the ":*" suffix is
+    # the standard AWS pattern for "all log streams within this specific, named log group" —
+    # stream names are dynamic and can't be enumerated in advance.
+    # trivy:ignore:AVD-AWS-0057
     resources = ["${aws_cloudwatch_log_group.flow_logs.arn}:*"]
   }
 }

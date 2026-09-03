@@ -105,10 +105,11 @@ data "aws_iam_policy_document" "cloudtrail_cloudwatch_delivery" {
       "logs:PutLogEvents",
     ]
 
-    # trivy:ignore:AVD-AWS-0057 The ":*" suffix is the standard AWS pattern for a CloudWatch
-    # log group ARN — it means "all log streams within this specific, named log group," not an
-    # unconstrained wildcard. Stream names are assigned dynamically by CloudTrail and can't be
-    # enumerated in advance, so this is as scoped as this permission can get.
+    # The ":*" suffix is the standard AWS pattern for a CloudWatch log group ARN — it means
+    # "all log streams within this specific, named log group," not an unconstrained wildcard.
+    # Stream names are assigned dynamically by CloudTrail and can't be enumerated in advance,
+    # so this is as scoped as this permission can get.
+    # trivy:ignore:AVD-AWS-0057
     resources = ["${aws_cloudwatch_log_group.cloudtrail.arn}:*"]
   }
 }
@@ -310,9 +311,10 @@ resource "aws_s3_bucket_versioning" "access_logs" {
   }
 }
 
-# trivy:ignore:AVD-AWS-0132 AWS does not support SSE-KMS for S3 server-access-log target
-# buckets, only SSE-S3 — this is a hard AWS platform constraint, not a design choice. Same
-# rationale as the CKV_AWS_145 skip below.
+# AWS does not support SSE-KMS for S3 server-access-log target buckets, only SSE-S3 — this is
+# a hard AWS platform constraint, not a design choice. Same rationale as the CKV_AWS_145 skip
+# below.
+# trivy:ignore:AVD-AWS-0132
 resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
   bucket = aws_s3_bucket.access_logs.id
 
