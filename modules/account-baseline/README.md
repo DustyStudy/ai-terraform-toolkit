@@ -45,26 +45,26 @@ when they're stale) rather than hand-editing anything between the markers.
 <!-- BEGIN_TF_DOCS -->
 ## Inputs
 
-| Name | Description | Type | Default |
-|---|---|---|---|
-| `name_prefix` | Prefix for all resource names | `string` | n/a (required) |
-| `account_id` | Target account ID for SCP attachment | `string` | `""` |
-| `cloudtrail_log_retention_days` | CloudWatch Logs retention for CloudTrail log group | `number` | `365` |
-| `enable_guardduty` | Enable GuardDuty | `bool` | `true` |
-| `enable_eks_protection` | Enable GuardDuty EKS audit log protection | `bool` | `false` |
-| `attach_scp_ids` | Map of SCP policy IDs to attach | `map(string)` | `{}` |
-| `tags` | Tags applied to all resources | `map(string)` | `{}` |
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| account\_id | AWS account ID this baseline is being applied to. Used only for SCP attachment target\_id. | `string` | `""` | no |
+| attach\_scp\_ids | Map of SCP policy IDs (already created in the org management account) to attach to this account. Key is arbitrary/descriptive, value is the policy ID. | `map(string)` | `{}` | no |
+| cloudtrail\_log\_retention\_days | CloudWatch Logs retention period for the CloudTrail log group. FedRAMP Moderate expects at least 1 year of retention; cold/long-term storage also lives indefinitely in the CloudTrail S3 bucket. | `number` | `365` | no |
+| enable\_eks\_protection | Whether to enable GuardDuty EKS audit log protection. Set to false if the account has no EKS clusters. | `bool` | `false` | no |
+| enable\_guardduty | Whether to enable GuardDuty in this account. | `bool` | `true` | no |
+| name\_prefix | Prefix used for naming all resources created by this module (e.g. an org or team identifier). | `string` | n/a | yes |
+| tags | Tags applied to all resources created by this module. | `map(string)` | `{}` | no |
 
 ## Outputs
 
 | Name | Description |
-|---|---|
-| `cloudtrail_arn` | ARN of the CloudTrail trail |
-| `cloudtrail_bucket_name` | S3 bucket storing CloudTrail logs |
-| `config_bucket_name` | S3 bucket storing Config logs |
-| `access_logs_bucket_name` | S3 bucket storing access logs for the other buckets in this module |
-| `cloudtrail_sns_topic_arn` | SNS topic CloudTrail publishes log-delivery notifications to |
-| `guardduty_detector_id` | GuardDuty detector ID (if enabled) |
+|------|-------------|
+| access\_logs\_bucket\_name | Name of the S3 bucket storing access logs for the other buckets in this module. |
+| cloudtrail\_arn | ARN of the CloudTrail trail created by this module. |
+| cloudtrail\_bucket\_name | Name of the S3 bucket storing CloudTrail logs. |
+| cloudtrail\_sns\_topic\_arn | ARN of the SNS topic CloudTrail publishes log-delivery notifications to. |
+| config\_bucket\_name | Name of the S3 bucket storing AWS Config logs. |
+| guardduty\_detector\_id | ID of the GuardDuty detector, if enabled. |
 <!-- END_TF_DOCS -->
 
 ## Notes

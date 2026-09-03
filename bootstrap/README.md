@@ -61,18 +61,18 @@ dependency on the backend it manages, which is a little unusual — that's the t
 <!-- BEGIN_TF_DOCS -->
 ## Inputs
 
-| Name | Description | Type | Default |
-|---|---|---|---|
-| `aws_region` | AWS region to create the state bucket and lock table in | `string` | `"us-east-1"` |
-| `name_prefix` | Prefix used for naming the state bucket and lock table | `string` | n/a (required) |
-| `tags` | Tags applied to the state bucket and lock table | `map(string)` | `{}` |
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| aws\_region | AWS region to create the state bucket and lock table in. | `string` | `"us-east-1"` | no |
+| name\_prefix | Prefix used for naming the state bucket and lock table (e.g. an org or team identifier). | `string` | n/a | yes |
+| tags | Tags applied to the state bucket and lock table. | `map(string)` | `{}` | no |
 
 ## Outputs
 
 | Name | Description |
-|---|---|
-| `state_bucket_name` | S3 bucket to use as `bucket` in other configs' backend blocks |
-| `state_bucket_arn` | ARN of the state bucket |
-| `lock_table_name` | DynamoDB table to use as `dynamodb_table` in other configs' backend blocks |
-| `lock_table_arn` | ARN of the DynamoDB lock table |
+|------|-------------|
+| lock\_table\_arn | ARN of the DynamoDB lock table. |
+| lock\_table\_name | DynamoDB table to use as the `dynamodb_table` value in every other root config's backend "s3" block. |
+| state\_bucket\_arn | ARN of the state bucket. |
+| state\_bucket\_name | S3 bucket to use as the `bucket` value in every other root config's backend "s3" block. |
 <!-- END_TF_DOCS -->
