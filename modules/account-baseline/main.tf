@@ -105,6 +105,10 @@ data "aws_iam_policy_document" "cloudtrail_cloudwatch_delivery" {
       "logs:PutLogEvents",
     ]
 
+    # trivy:ignore:AVD-AWS-0057 The ":*" suffix is the standard AWS pattern for a CloudWatch
+    # log group ARN — it means "all log streams within this specific, named log group," not an
+    # unconstrained wildcard. Stream names are assigned dynamically by CloudTrail and can't be
+    # enumerated in advance, so this is as scoped as this permission can get.
     resources = ["${aws_cloudwatch_log_group.cloudtrail.arn}:*"]
   }
 }
@@ -311,6 +315,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
 
   # checkov:skip=CKV_AWS_145: S3 server access logging requires the target bucket to use
   # SSE-S3 — AWS does not support SSE-KMS for log-delivery target buckets.
+  # trivy:ignore:AVD-AWS-0132 Same rationale — AWS does not support SSE-KMS for S3
+  # server-access-log target buckets, only SSE-S3. This is a hard AWS platform constraint.
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"

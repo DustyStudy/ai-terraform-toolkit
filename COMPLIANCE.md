@@ -37,21 +37,22 @@ this repo has no visibility into. Treat this as a technical starting point.
 
 ## Documented exceptions
 
-A handful of Checkov checks are suppressed inline (`# checkov:skip=...`) directly in the
-Terraform, each with a one-line reason at the point of suppression. Centralized here so a
-reviewer doesn't have to go hunting through the code for them:
+A handful of Checkov and Trivy checks are suppressed inline (`# checkov:skip=...` /
+`# trivy:ignore:...`) directly in the Terraform, each with a one-line reason at the point of
+suppression. Centralized here so a reviewer doesn't have to go hunting through the code for them:
 
 | Check | Where | Why it's suppressed |
 |---|---|---|
 | `CKV_AWS_109` / `CKV_AWS_111` (IAM permissions-management/write without constraint) | KMS key policies in `account-baseline` (`logs_kms`), `vpc-baseline` (`flow_logs_kms`), and `s3-secure-bucket` (`kms_key_policy`) | The flagged statement is AWS's own documented default KMS key policy — full access for the account root — which exists so the account's IAM policies retain the ability to manage/rotate the key. Removing it (with no other administrative grant) makes the key unmanageable. |
 | `CKV_AWS_144` (S3 cross-region replication) | Every bucket created directly by this toolkit (`cloudtrail`, `config`, `access_logs` in `account-baseline`; the bucket in `s3-secure-bucket`) | Replication needs a pre-provisioned destination bucket + IAM role that are specific to each deployment's region/DR strategy — there's no sane default for a generic reusable module. Add `aws_s3_bucket_replication_configuration` in your root config if your org requires it. |
 | `CKV_AWS_18` (S3 access logging) | `access_logs` bucket in `account-baseline` | This bucket *is* the access-log destination for the other buckets in the module. Logging it to itself (or standing up a second sink) just adds an infinite logging loop for no real audit benefit. |
-| `CKV_AWS_145` (S3 encrypted with KMS) | `access_logs` bucket in `account-baseline` | AWS does not support SSE-KMS for S3 server-access-log target buckets — only SSE-S3. This is a hard AWS platform constraint, not a design choice. |
+| `CKV_AWS_145` / `AVD-AWS-0132` (S3 encrypted with customer-managed KMS) | `access_logs` bucket in `account-baseline` | AWS does not support SSE-KMS for S3 server-access-log target buckets — only SSE-S3. This is a hard AWS platform constraint, not a design choice. |
 | `CKV2_AWS_3` (GuardDuty enabled org/region-wide) | `aws_guardduty_detector` in `account-baseline` | This module operates at the member-account level. Org-wide auto-enablement for new accounts is a one-time setup in the GuardDuty delegated administrator account (`aws_guardduty_organization_configuration`), which is a separate, org-level concern outside this module's scope. |
+| `AVD-AWS-0057` (IAM policy uses wildcarded resource) | CloudTrail→CloudWatch Logs delivery policy in `account-baseline`; VPC flow-logs delivery policy in `vpc-baseline` | The `:*` suffix on a CloudWatch log group ARN is AWS's own standard pattern for "all log streams within this specific, named log group" — stream names are assigned dynamically and can't be enumerated in advance, so this is as scoped as the permission can get. |
 
 If you fork this repo and these tradeoffs don't fit your environment (e.g. you *do* want to
-mandate cross-region replication), remove the relevant skip comment and either implement the
-control or accept the Checkov finding as a real gap for your use case.
+mandate cross-region replication), remove the relevant skip/ignore comment and either implement
+the control or accept the finding as a real gap for your use case.
 
 ## GovCloud vs. commercial AWS
 
