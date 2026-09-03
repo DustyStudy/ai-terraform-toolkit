@@ -103,7 +103,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run Trivy config scan
+      - name: Run Trivy config scan (human-readable log output)
+        uses: aquasecurity/trivy-action@v0.24.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: table
+          severity: "CRITICAL,HIGH,MEDIUM"
+          exit-code: "0" # informational only — the SARIF step below is what gates the build
+
+      - name: Run Trivy config scan (SARIF for Security tab + build gate)
         uses: aquasecurity/trivy-action@v0.24.0
         with:
           scan-type: config
