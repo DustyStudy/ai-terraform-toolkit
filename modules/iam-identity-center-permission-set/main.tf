@@ -24,16 +24,16 @@ resource "aws_ssoadmin_managed_policy_attachment" "aws_managed" {
 }
 
 resource "aws_ssoadmin_permission_set_inline_policy" "inline" {
-  count               = var.inline_policy_json != null ? 1 : 0
-  instance_arn        = tolist(data.aws_ssoadmin_instances.this.arns)[0]
-  permission_set_arn  = aws_ssoadmin_permission_set.this.arn
-  inline_policy       = var.inline_policy_json
+  count              = var.inline_policy_json != null ? 1 : 0
+  instance_arn       = tolist(data.aws_ssoadmin_instances.this.arns)[0]
+  permission_set_arn = aws_ssoadmin_permission_set.this.arn
+  inline_policy      = var.inline_policy_json
 }
 
 resource "aws_ssoadmin_permissions_boundary_attachment" "boundary" {
-  count               = var.permissions_boundary_policy_arn != null ? 1 : 0
-  instance_arn        = tolist(data.aws_ssoadmin_instances.this.arns)[0]
-  permission_set_arn  = aws_ssoadmin_permission_set.this.arn
+  count              = var.permissions_boundary_policy_arn != null ? 1 : 0
+  instance_arn       = tolist(data.aws_ssoadmin_instances.this.arns)[0]
+  permission_set_arn = aws_ssoadmin_permission_set.this.arn
 
   permissions_boundary {
     managed_policy_arn = var.permissions_boundary_policy_arn

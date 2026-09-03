@@ -147,6 +147,7 @@ resource "aws_iam_role_policy" "flow_logs" {
 data "aws_iam_policy_document" "flow_logs_permissions" {
   statement {
     effect = "Allow"
+
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
@@ -154,6 +155,7 @@ data "aws_iam_policy_document" "flow_logs_permissions" {
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",
     ]
+
     resources = ["${aws_cloudwatch_log_group.flow_logs.arn}:*"]
   }
 }

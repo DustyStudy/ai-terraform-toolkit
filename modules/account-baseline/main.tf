@@ -70,10 +70,12 @@ data "aws_iam_policy_document" "cloudtrail_cloudwatch_delivery" {
   count = var.enable_cloudtrail_cloudwatch_logs ? 1 : 0
   statement {
     effect = "Allow"
+
     actions = [
       "logs:CreateLogStream",
       "logs:PutLogEvents",
     ]
+
     resources = ["${aws_cloudwatch_log_group.cloudtrail[0].arn}:*"]
   }
 }
