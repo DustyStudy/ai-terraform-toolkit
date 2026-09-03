@@ -75,6 +75,16 @@ centrally instead of buried in workflow logs. See `.github/workflows/ci.yml`, `.
 `.tflint.hcl`, and `.gitleaks.toml` for configuration, and `COMPLIANCE.md` for how this maps to
 NIST 800-53 / FedRAMP control families.
 
+## Dependency management
+
+[Dependabot](https://docs.github.com/en/code-security/dependabot) is configured
+(`.github/dependabot.yml`) to open weekly PRs for:
+- GitHub Actions used in `ci.yml` (keeps the scanning stack itself current)
+- Terraform provider version constraints in each module and in `landing-zone/`
+
+Enable it under the repo's Settings → Code security → Dependabot, if it isn't already active by
+default for your account/org.
+
 ## License
 
 MIT — see `LICENSE`.
