@@ -36,7 +36,7 @@ run "creates_permission_set_with_expected_defaults" {
 
     target_account_ids = ["111111111111"]
 
-    principal_id = "g-abc123456"
+    principal_id = "a1b2c3d4-5678-90ab-cdef-1234567890ab"
   }
 
   assert {
@@ -78,7 +78,7 @@ run "attaches_every_supplied_managed_policy" {
 
     target_account_ids = ["111111111111"]
 
-    principal_id = "g-abc123456"
+    principal_id = "a1b2c3d4-5678-90ab-cdef-1234567890ab"
 
     aws_managed_policy_arns = [
       "arn:aws:iam::aws:policy/ReadOnlyAccess",
@@ -101,7 +101,7 @@ run "inline_policy_created_when_supplied" {
 
     target_account_ids = ["111111111111"]
 
-    principal_id = "g-abc123456"
+    principal_id = "a1b2c3d4-5678-90ab-cdef-1234567890ab"
 
     inline_policy_json = "{\"Version\":\"2012-10-17\",\"Statement\":[]}"
   }
@@ -127,7 +127,7 @@ run "permissions_boundary_created_when_supplied" {
 
     target_account_ids = ["111111111111"]
 
-    principal_id = "g-abc123456"
+    principal_id = "a1b2c3d4-5678-90ab-cdef-1234567890ab"
 
     permissions_boundary_policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
   }
@@ -147,7 +147,7 @@ run "one_account_assignment_per_target_account" {
 
     target_account_ids = ["111111111111", "222222222222", "333333333333"]
 
-    principal_id = "g-abc123456"
+    principal_id = "a1b2c3d4-5678-90ab-cdef-1234567890ab"
   }
 
   assert {
@@ -165,7 +165,7 @@ run "invalid_principal_type_is_rejected" {
 
     target_account_ids = ["111111111111"]
 
-    principal_id = "g-abc123456"
+    principal_id = "a1b2c3d4-5678-90ab-cdef-1234567890ab"
 
     principal_type = "ROLE" # not a valid Identity Center principal type
   }
