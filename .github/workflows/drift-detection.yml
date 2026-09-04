@@ -45,6 +45,12 @@ jobs:
             echo "::notice::Drift detection skipped — AWS_ROLE_ARN secret not set. See the comment at the top of this workflow file to configure it."
           fi
 
+          if [ -n "${{ secrets.LANDING_ZONE_TFVARS }}" ]; then
+            echo "has_tfvars_secret=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tfvars_secret=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
         if: steps.check_config.outputs.configured == 'true'
         uses: actions/checkout@v4
@@ -63,7 +69,9 @@ jobs:
           terraform_version: "1.9.8"
 
       - name: Write tfvars from secret (if provided)
-        if: steps.check_config.outputs.configured == 'true' && secrets.LANDING_ZONE_TFVARS != ''
+        # GitHub Actions doesn't allow referencing `secrets` directly inside an `if:` expression
+        # — the check happens in the shell script above instead, exposed as a step output.
+        if: steps.check_config.outputs.configured == 'true' && steps.check_config.outputs.has_tfvars_secret == 'true'
         run: echo "${{ secrets.LANDING_ZONE_TFVARS }}" > landing-zone/drift-check.auto.tfvars
 
       - name: Terraform init

@@ -14,6 +14,18 @@ mock_provider "aws" {
       identity_store_ids = ["d-1234567890"]
     }
   }
+
+  # aws_ssoadmin_managed_policy_attachment, aws_ssoadmin_permission_set_inline_policy,
+  # aws_ssoadmin_permissions_boundary_attachment, and aws_ssoadmin_account_assignment all take
+  # this permission set's .arn as a real, validated argument — a full provider mock fakes it
+  # with a random non-ARN string otherwise, which fails client-side ARN format validation on
+  # every one of those resources. See account-baseline's tests/main.tftest.hcl for the fuller
+  # pattern this follows.
+  mock_resource "aws_ssoadmin_permission_set" {
+    defaults = {
+      arn = "arn:aws:sso:::permissionSet/ssoins-1234567890abcdef/ps-1234567890abcdef"
+    }
+  }
 }
 
 run "creates_permission_set_with_expected_defaults" {

@@ -10,6 +10,54 @@
 # needing explicit mock_resource default overrides.
 
 mock_provider "aws" {
+  # These five resource types all have their .arn (or, for S3 buckets, .id) consumed by another
+  # resource's real argument in this module — e.g. aws_cloudtrail.kms_key_id, aws_cloudtrail.
+  # sns_topic_name, aws_config_configuration_recorder.role_arn. A full provider mock fakes those
+  # computed attributes with random strings that aren't ARN-shaped at all, which fails the
+  # provider's client-side ARN format validation on the *consuming* resource — independent of
+  # any real API call. Data-source-only references (inside aws_iam_policy_document statement
+  # blocks) don't need this, since that data source's .json output is separately, entirely
+  # overridden below regardless of what ARNs its statements reference.
+  mock_resource "aws_kms_key" {
+    defaults = {
+      id = "mock-kms-key-id"
+
+      arn = "arn:aws:kms:us-east-1:123456789012:key/mock-kms-key-id"
+    }
+  }
+
+  mock_resource "aws_sns_topic" {
+    defaults = {
+      id = "arn:aws:sns:us-east-1:123456789012:mock-topic"
+
+      arn = "arn:aws:sns:us-east-1:123456789012:mock-topic"
+    }
+  }
+
+  mock_resource "aws_cloudwatch_log_group" {
+    defaults = {
+      id = "mock-log-group"
+
+      arn = "arn:aws:logs:us-east-1:123456789012:log-group:mock-log-group"
+    }
+  }
+
+  mock_resource "aws_iam_role" {
+    defaults = {
+      id = "mock-role"
+
+      arn = "arn:aws:iam::123456789012:role/mock-role"
+    }
+  }
+
+  mock_resource "aws_s3_bucket" {
+    defaults = {
+      id = "mock-bucket-id"
+
+      arn = "arn:aws:s3:::mock-bucket-id"
+    }
+  }
+
   # aws_partition/aws_caller_identity/aws_region are pure local lookups (no real API call), but
   # a full provider mock still fakes their attributes with random schema-valid-but-meaningless
   # strings. This module builds ARNs and resource names from those attributes (partition, account

@@ -11,6 +11,26 @@ mock_provider "aws" {
     }
   }
 
+  # aws_flow_log.iam_role_arn and .log_destination both require valid-ARN-shaped strings — a
+  # full provider mock fakes these resources' .arn with random non-ARN strings otherwise, which
+  # fails the provider's client-side ARN format validation on aws_flow_log independent of any
+  # real API call. See account-baseline's tests/main.tftest.hcl for the fuller pattern.
+  mock_resource "aws_iam_role" {
+    defaults = {
+      id = "mock-role"
+
+      arn = "arn:aws:iam::123456789012:role/mock-role"
+    }
+  }
+
+  mock_resource "aws_cloudwatch_log_group" {
+    defaults = {
+      id = "mock-log-group"
+
+      arn = "arn:aws:logs:us-east-1:123456789012:log-group:mock-log-group"
+    }
+  }
+
   # See account-baseline's tests/main.tftest.hcl for the full rationale on these three overrides:
   # aws_partition/aws_caller_identity/aws_region are pure local lookups that a full provider mock
   # still fakes with random values, breaking the ARNs this module constructs from them.
