@@ -79,7 +79,7 @@ run "defaults_create_a_secure_bucket" {
   }
 
   assert {
-    condition = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Enabled"
+    condition = one(aws_s3_bucket_versioning.this.versioning_configuration).status == "Enabled"
 
     error_message = "Versioning should default to Enabled."
   }
@@ -91,7 +91,7 @@ run "defaults_create_a_secure_bucket" {
   }
 
   assert {
-    condition = aws_s3_bucket_server_side_encryption_configuration.this.rule[0].apply_server_side_encryption_by_default[0].sse_algorithm == "aws:kms"
+    condition = one(one(aws_s3_bucket_server_side_encryption_configuration.this.rule).apply_server_side_encryption_by_default).sse_algorithm == "aws:kms"
 
     error_message = "Encryption must default to SSE-KMS, not SSE-S3."
   }
@@ -109,7 +109,7 @@ run "defaults_create_a_secure_bucket" {
   }
 
   assert {
-    condition = aws_s3_bucket_lifecycle_configuration.this.rule[0].abort_incomplete_multipart_upload[0].days_after_initiation == 7
+    condition = one(one(aws_s3_bucket_lifecycle_configuration.this.rule).abort_incomplete_multipart_upload).days_after_initiation == 7
 
     error_message = "The mandatory abort-incomplete-multipart-upload rule should fire after 7 days."
   }
@@ -137,7 +137,7 @@ run "external_kms_key_is_used_instead_of_creating_one" {
   }
 
   assert {
-    condition = aws_s3_bucket_server_side_encryption_configuration.this.rule[0].apply_server_side_encryption_by_default[0].kms_master_key_id == "arn:aws:kms:us-east-1:123456789012:key/external-key"
+    condition = one(one(aws_s3_bucket_server_side_encryption_configuration.this.rule).apply_server_side_encryption_by_default).kms_master_key_id == "arn:aws:kms:us-east-1:123456789012:key/external-key"
 
     error_message = "The bucket's SSE config should use the externally-supplied key, not a module-created one."
   }
@@ -159,7 +159,7 @@ run "versioning_can_be_suspended" {
   }
 
   assert {
-    condition = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Suspended"
+    condition = one(aws_s3_bucket_versioning.this.versioning_configuration).status == "Suspended"
 
     error_message = "enable_versioning = false should result in Suspended status, not Disabled or Enabled."
   }

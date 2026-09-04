@@ -124,7 +124,7 @@ run "guardduty_enabled_by_default" {
   }
 
   assert {
-    condition = aws_guardduty_detector.this[0].datasources[0].kubernetes[0].audit_logs[0].enable == false
+    condition = one(one(one(aws_guardduty_detector.this[0].datasources).kubernetes).audit_logs).enable == false
 
     error_message = "EKS audit log protection should default to disabled (enable_eks_protection defaults to false)."
   }
@@ -166,7 +166,7 @@ run "eks_protection_can_be_enabled" {
   }
 
   assert {
-    condition = aws_guardduty_detector.this[0].datasources[0].kubernetes[0].audit_logs[0].enable == true
+    condition = one(one(one(aws_guardduty_detector.this[0].datasources).kubernetes).audit_logs).enable == true
 
     error_message = "enable_eks_protection = true should turn on GuardDuty's Kubernetes audit log protection."
   }
@@ -260,13 +260,13 @@ run "config_bucket_uses_kms_not_aes256" {
   }
 
   assert {
-    condition = aws_s3_bucket_server_side_encryption_configuration.config.rule[0].apply_server_side_encryption_by_default[0].sse_algorithm == "aws:kms"
+    condition = one(one(aws_s3_bucket_server_side_encryption_configuration.config.rule).apply_server_side_encryption_by_default).sse_algorithm == "aws:kms"
 
     error_message = "The Config delivery bucket must use SSE-KMS, not the AWS-managed SSE-S3 default."
   }
 
   assert {
-    condition = aws_s3_bucket_server_side_encryption_configuration.config.rule[0].apply_server_side_encryption_by_default[0].kms_master_key_id == aws_kms_key.logs.arn
+    condition = one(one(aws_s3_bucket_server_side_encryption_configuration.config.rule).apply_server_side_encryption_by_default).kms_master_key_id == aws_kms_key.logs.arn
 
     error_message = "The Config delivery bucket must use this module's shared logs KMS key."
   }
@@ -282,7 +282,7 @@ run "access_logs_bucket_uses_aes256_not_kms" {
   }
 
   assert {
-    condition = aws_s3_bucket_server_side_encryption_configuration.access_logs.rule[0].apply_server_side_encryption_by_default[0].sse_algorithm == "AES256"
+    condition = one(one(aws_s3_bucket_server_side_encryption_configuration.access_logs.rule).apply_server_side_encryption_by_default).sse_algorithm == "AES256"
 
     error_message = "The access-logs bucket must use SSE-S3 (AES256) — AWS does not support SSE-KMS for S3 server-access-log target buckets."
   }
