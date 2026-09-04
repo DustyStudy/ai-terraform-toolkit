@@ -11,6 +11,33 @@ mock_provider "aws" {
     }
   }
 
+  # See account-baseline's tests/main.tftest.hcl for the full rationale on these three overrides:
+  # aws_partition/aws_caller_identity/aws_region are pure local lookups that a full provider mock
+  # still fakes with random values, breaking the ARNs this module constructs from them.
+  mock_data "aws_partition" {
+    defaults = {
+      partition = "aws"
+
+      dns_suffix = "amazonaws.com"
+    }
+  }
+
+  mock_data "aws_caller_identity" {
+    defaults = {
+      account_id = "123456789012"
+
+      arn = "arn:aws:iam::123456789012:root"
+
+      user_id = "AIDACKCEVSQ6C2EXAMPLE"
+    }
+  }
+
+  mock_data "aws_region" {
+    defaults = {
+      name = "us-east-1"
+    }
+  }
+
   # See account-baseline's tests/main.tftest.hcl for why this override is necessary: without it,
   # aws_iam_policy_document's mocked .json output isn't valid JSON, which fails provider-side
   # validation on assume_role_policy/policy arguments before any real API call happens.

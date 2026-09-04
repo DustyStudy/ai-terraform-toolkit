@@ -27,6 +27,28 @@ mock_provider "aws" {
     }
   }
 
+  # See account-baseline's tests/main.tftest.hcl for the full rationale on these two overrides:
+  # aws_partition/aws_caller_identity are pure local lookups that a full provider mock still
+  # fakes with random values, breaking the ARN this module constructs from them for its KMS
+  # key policy's root-account principal.
+  mock_data "aws_partition" {
+    defaults = {
+      partition = "aws"
+
+      dns_suffix = "amazonaws.com"
+    }
+  }
+
+  mock_data "aws_caller_identity" {
+    defaults = {
+      account_id = "123456789012"
+
+      arn = "arn:aws:iam::123456789012:root"
+
+      user_id = "AIDACKCEVSQ6C2EXAMPLE"
+    }
+  }
+
   # See account-baseline's tests/main.tftest.hcl for why this override is necessary: without it,
   # aws_iam_policy_document's mocked .json output isn't valid JSON, which fails provider-side
   # validation on the KMS key policy / bucket policy arguments before any real API call happens.

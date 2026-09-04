@@ -10,6 +10,36 @@
 # needing explicit mock_resource default overrides.
 
 mock_provider "aws" {
+  # aws_partition/aws_caller_identity/aws_region are pure local lookups (no real API call), but
+  # a full provider mock still fakes their attributes with random schema-valid-but-meaningless
+  # strings. This module builds ARNs and resource names from those attributes (partition, account
+  # ID, region), so a fake partition like "uftickkw" produces an invalid ARN that fails the
+  # provider's client-side ARN format validation — independent of any real API call. These
+  # overrides give them realistic, valid values instead.
+  mock_data "aws_partition" {
+    defaults = {
+      partition = "aws"
+
+      dns_suffix = "amazonaws.com"
+    }
+  }
+
+  mock_data "aws_caller_identity" {
+    defaults = {
+      account_id = "123456789012"
+
+      arn = "arn:aws:iam::123456789012:root"
+
+      user_id = "AIDACKCEVSQ6C2EXAMPLE"
+    }
+  }
+
+  mock_data "aws_region" {
+    defaults = {
+      name = "us-east-1"
+    }
+  }
+
   # aws_iam_policy_document is pure local computation (no real AWS API call), but a full
   # provider mock fakes its .json output anyway — as a non-JSON placeholder string. That breaks
   # every resource argument that requires syntactically valid JSON (assume_role_policy, policy),
