@@ -73,15 +73,33 @@ those markers** — if you add/change a variable or output, either run
 `variables.tf`/`outputs.tf` never drift apart (CI's `terraform-docs-check` job will catch it if
 they do, but don't rely on that — fix it before proposing the PR).
 
+## Testing
+
+Each module has `tests/main.tftest.hcl` using Terraform's native test framework, running fully
+offline against `mock_provider "aws" {}` — no AWS credentials needed. If you add a variable, a
+conditional resource (a new `count`/`for_each` toggle), or an output, add or update the
+corresponding `run` block rather than leaving the test suite stale — treat it the same way you'd
+treat the terraform-docs tables: something that must stay in sync with the code, not an
+afterthought. Run `terraform test` from inside the module directory to check your work before
+proposing a PR; CI's `terraform-test` job will catch drift here too, but don't rely on that.
+
+Most useful assertions in this suite are self-referential (e.g. "does resource A's attribute
+equal resource B's attribute") rather than comparing against a hardcoded string, since most
+computed AWS attributes get faked out by the mock. Don't try to assert on the literal *content*
+of an `aws_iam_policy_document`'s `.json` output — that's a local computation the mock fakes
+out too, and isn't what these tests are for (Checkov/Trivy/Terrascan validate policy content).
+
 ## Workflow expectations
 
 1. Understand the request; identify which module(s) apply.
 2. Write/modify Terraform using the module(s).
 3. Run `terraform fmt` and `terraform validate` locally.
-4. Summarize the change and the planned resources in plain English before proposing a PR.
-5. PR description must include: what changed, why, and the `terraform plan` output (or a summary
+4. If a module's variables, conditionals, or outputs changed, update `tests/main.tftest.hcl` and
+   run `terraform test` for that module.
+5. Summarize the change and the planned resources in plain English before proposing a PR.
+6. PR description must include: what changed, why, and the `terraform plan` output (or a summary
    of it if long).
-6. Do not run `terraform apply` directly — apply happens via CI/CD after review, not from a local
+7. Do not run `terraform apply` directly — apply happens via CI/CD after review, not from a local
    session, unless the user explicitly asks for a local apply against a sandbox/dev account.
 
 ## When something doesn't fit the rules above

@@ -65,6 +65,25 @@ jobs:
             (cd "$dir" && tflint --format compact)
           done
 
+  terraform-test:
+    name: terraform test (module unit tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Run terraform test for each module
+        run: |
+          for dir in modules/*/; do
+            echo "== Testing $dir =="
+            (cd "$dir" && terraform init -backend=false && terraform test)
+          done
+
   terraform-docs-check:
     name: terraform-docs (README freshness)
     runs-on: ubuntu-latest

@@ -27,9 +27,13 @@ ai-terraform-toolkit/
 ├── bootstrap/                    # One-time root config: creates the S3+DynamoDB state backend
 ├── modules/
 │   ├── account-baseline/        # CloudTrail, Config, GuardDuty, SCP attachment for one account
+│   │   └── tests/                # Native `terraform test` unit tests (mock_provider, no AWS creds)
 │   ├── s3-secure-bucket/        # Encrypted, logged, access-blocked S3 bucket
+│   │   └── tests/
 │   ├── iam-identity-center-permission-set/  # Standardized SSO permission sets
+│   │   └── tests/
 │   └── vpc-baseline/            # VPC with public/private subnets, flow logs, no default SG rules
+│       └── tests/
 ├── landing-zone/                # Root config: seed/configure a new AWS account using the modules
 ├── .claude/
 │   ├── commands/                # Slash commands for common requests
@@ -107,6 +111,26 @@ NIST 800-53 / FedRAMP control families.
 
 Enable it under the repo's Settings → Code security → Dependabot, if it isn't already active by
 default for your account/org.
+
+## Testing
+
+Each module has a `tests/main.tftest.hcl` file using Terraform's built-in test framework
+(`terraform test`, available since 1.7) with a full `mock_provider "aws" {}` — so the whole
+suite runs offline, with no AWS credentials, network access, or real cloud resources involved.
+CI's `terraform-test` job runs it on every PR.
+
+Run it yourself from inside any module directory:
+
+```bash
+cd modules/s3-secure-bucket
+terraform init -backend=false
+terraform test
+```
+
+These tests check the module's *Terraform logic* — variable-driven conditionals, resource
+counts, correct attribute wiring between resources, output correctness — not the semantic
+content of generated IAM policy JSON (that's what Checkov/Trivy/Terrascan are for). If you add
+a variable, a conditional resource, or an output, add or update the corresponding `run` block.
 
 ## Module documentation
 
