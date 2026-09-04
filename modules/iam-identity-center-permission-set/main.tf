@@ -9,7 +9,7 @@ data "aws_ssoadmin_instances" "this" {}
 
 resource "aws_ssoadmin_permission_set" "this" {
   name             = var.permission_set_name
-  description      = var.description
+  description      = var.description != "" ? var.description : null
   instance_arn     = tolist(data.aws_ssoadmin_instances.this.arns)[0]
   session_duration = var.session_duration
 

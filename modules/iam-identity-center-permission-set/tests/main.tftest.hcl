@@ -46,6 +46,12 @@ run "creates_permission_set_with_expected_defaults" {
   }
 
   assert {
+    condition = aws_ssoadmin_permission_set.this.description == null
+
+    error_message = "An empty description variable (the default) must result in a null description argument, not an empty string — AWS rejects an empty-string description (must be 1-700 chars if set at all)."
+  }
+
+  assert {
     condition = aws_ssoadmin_permission_set.this.session_duration == "PT4H"
 
     error_message = "session_duration should default to PT4H when not specified."

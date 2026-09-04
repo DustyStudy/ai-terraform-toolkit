@@ -4,7 +4,7 @@ variable "permission_set_name" {
 }
 
 variable "description" {
-  description = "Description of the permission set's purpose."
+  description = "Description of the permission set's purpose. AWS requires this to be 1-700 characters if set at all, so an empty string (the default) omits the argument entirely rather than sending an invalid empty description."
   type        = string
   default     = ""
 }
