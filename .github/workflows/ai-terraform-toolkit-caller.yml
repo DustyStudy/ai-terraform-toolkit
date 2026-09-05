@@ -1,0 +1,21 @@
+# Drop this in as .github/workflows/ci.yml in ai-terraform-toolkit.
+# Uses the same base as every other Terraform repo, plus the extra jobs
+# this repo already has (unit tests, docs freshness, cost estimate) as
+# opt-in toggles instead of one-off custom steps.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  terraform-ci:
+    uses: DustyStudy/github-actions-ci-templates/.github/workflows/terraform-ci.yml@v1
+    with:
+      working-directory: "."
+      enable-tests: true
+      enable-docs-check: true
+      enable-infracost: true
+    secrets:
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
