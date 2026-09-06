@@ -503,25 +503,33 @@ resource "aws_guardduty_detector" "this" {
   # administrator account, via aws_guardduty_organization_configuration — that's a separate,
   # org-level concern outside a per-account baseline module's scope.
 
-  datasources {
-    s3_logs {
-      enable = true
-    }
-    kubernetes {
-      audit_logs {
-        enable = var.enable_eks_protection
-      }
-    }
-    malware_protection {
-      scan_ec2_instance_with_findings {
-        ebs_volumes {
-          enable = true
-        }
-      }
-    }
-  }
-
   tags = var.tags
+}
+
+# GuardDuty's `datasources` block on aws_guardduty_detector is deprecated by both AWS's API
+# (see the GuardDuty feature-object API change, March 2023) and the AWS provider — `features`
+# on separate aws_guardduty_detector_feature resources is the current way to configure which
+# data sources/protections a detector uses.
+
+resource "aws_guardduty_detector_feature" "s3_data_events" {
+  count       = var.enable_guardduty ? 1 : 0
+  detector_id = aws_guardduty_detector.this[0].id
+  name        = "S3_DATA_EVENTS"
+  status      = "ENABLED"
+}
+
+resource "aws_guardduty_detector_feature" "eks_audit_logs" {
+  count       = var.enable_guardduty ? 1 : 0
+  detector_id = aws_guardduty_detector.this[0].id
+  name        = "EKS_AUDIT_LOGS"
+  status      = var.enable_eks_protection ? "ENABLED" : "DISABLED"
+}
+
+resource "aws_guardduty_detector_feature" "ebs_malware_protection" {
+  count       = var.enable_guardduty ? 1 : 0
+  detector_id = aws_guardduty_detector.this[0].id
+  name        = "EBS_MALWARE_PROTECTION"
+  status      = "ENABLED"
 }
 
 ############################################

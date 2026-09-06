@@ -124,7 +124,7 @@ run "guardduty_enabled_by_default" {
   }
 
   assert {
-    condition = one(one(one(aws_guardduty_detector.this[0].datasources).kubernetes).audit_logs).enable == false
+    condition = aws_guardduty_detector_feature.eks_audit_logs[0].status == "DISABLED"
 
     error_message = "EKS audit log protection should default to disabled (enable_eks_protection defaults to false)."
   }
@@ -166,7 +166,7 @@ run "eks_protection_can_be_enabled" {
   }
 
   assert {
-    condition = one(one(one(aws_guardduty_detector.this[0].datasources).kubernetes).audit_logs).enable == true
+    condition = aws_guardduty_detector_feature.eks_audit_logs[0].status == "ENABLED"
 
     error_message = "enable_eks_protection = true should turn on GuardDuty's Kubernetes audit log protection."
   }
