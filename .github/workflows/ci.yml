@@ -55,8 +55,19 @@ jobs:
         with:
           tflint_version: latest
 
+      - name: Cache tflint plugins
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
+
       - name: Init tflint plugins
         run: tflint --init
+        env:
+          # Authenticates the plugin-release lookup against GitHub's API (5,000 req/hr instead
+          # of the 60/hr unauthenticated limit) — tflint reads this automatically if set.
+          # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tflint on each module and the landing zone
         run: |
