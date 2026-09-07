@@ -141,6 +141,8 @@ centrally instead of buried in workflow logs. See `.github/workflows/ci.yml`, `.
 `.tflint.hcl`, and `.gitleaks.toml` for configuration, and `COMPLIANCE.md` for how this maps to
 NIST 800-53 / FedRAMP control families.
 
+Found a vulnerability rather than a lint finding? See `SECURITY.md` for how to report it privately.
+
 ## Dependency management
 
 [Dependabot](https://docs.github.com/en/code-security/dependabot) is configured
