@@ -1,0 +1,18 @@
+# Normalize line endings to LF for everything text-based, regardless of the
+# committer's OS/editor. Prevents the CRLF/LF drift that otherwise creeps into
+# generated Markdown (terraform-docs) vs. hand-written HCL/YAML.
+* text=auto eol=lf
+
+*.tf      text eol=lf
+*.tftest.hcl text eol=lf
+*.hcl     text eol=lf
+*.tfvars  text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.sh      text eol=lf
+
+# Never render as text / never let git touch line endings.
+*.png     binary
+*.jpg     binary
+*.gif     binary
