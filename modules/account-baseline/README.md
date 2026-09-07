@@ -15,9 +15,12 @@ your org's management account) to the target account by policy ID.
 
 ## Usage
 
+Pull this module by its tagged, versioned source (recommended for external consumers — pin to a
+release so an upstream `main` change can't silently alter what you apply):
+
 ```hcl
 module "account_baseline" {
-  source = "../../modules/account-baseline"
+  source = "github.com/DustyStudy/ai-terraform-toolkit//modules/account-baseline?ref=v1.0.0"
 
   name_prefix      = "acme"
   account_id       = "123456789012"
@@ -35,6 +38,11 @@ module "account_baseline" {
   }
 }
 ```
+
+Composing this module from elsewhere in this same repo (e.g. `landing-zone/`)? Use a relative
+path instead (`source = "../../modules/account-baseline"`) — that's what `landing-zone/main.tf`
+does, so in-repo callers always get the current, uncommitted state of the module during local
+development, not last release's tag.
 
 ## Requirements, Inputs & Outputs
 
