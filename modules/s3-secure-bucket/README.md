@@ -6,9 +6,12 @@ non-TLS requests, optional access logging to a separate bucket, and optional lif
 
 ## Usage
 
+Pull this module by its tagged, versioned source (recommended for external consumers — pin to a
+release so an upstream `main` change can't silently alter what you apply):
+
 ```hcl
 module "reports_bucket" {
-  source = "../../modules/s3-secure-bucket"
+  source = "github.com/DustyStudy/ai-terraform-toolkit//modules/s3-secure-bucket?ref=v1.0.0"
 
   bucket_name       = "acme-prod-reports-a1b2c3"
   access_log_bucket = "acme-prod-access-logs"
@@ -30,6 +33,11 @@ module "reports_bucket" {
   }
 }
 ```
+
+Composing this module from elsewhere in this same repo (e.g. `landing-zone/`)? Use a relative
+path instead (`source = "../../modules/s3-secure-bucket"`) — that's what `landing-zone/main.tf`
+does, so in-repo callers always get the current, uncommitted state of the module during local
+development, not last release's tag.
 
 ## Requirements, Inputs & Outputs
 

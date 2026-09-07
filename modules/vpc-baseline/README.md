@@ -7,9 +7,12 @@ be used directly).
 
 ## Usage
 
+Pull this module by its tagged, versioned source (recommended for external consumers — pin to a
+release so an upstream `main` change can't silently alter what you apply):
+
 ```hcl
 module "vpc" {
-  source = "../../modules/vpc-baseline"
+  source = "github.com/DustyStudy/ai-terraform-toolkit//modules/vpc-baseline?ref=v1.0.0"
 
   name_prefix = "acme-prod"
   vpc_cidr    = "10.0.0.0/16"
@@ -33,6 +36,11 @@ module "vpc" {
   }
 }
 ```
+
+Composing this module from elsewhere in this same repo (e.g. `landing-zone/`)? Use a relative
+path instead (`source = "../../modules/vpc-baseline"`) — that's what `landing-zone/main.tf` does,
+so in-repo callers always get the current, uncommitted state of the module during local
+development, not last release's tag.
 
 ## Requirements, Inputs & Outputs
 

@@ -1,5 +1,9 @@
 # ai-terraform-toolkit
 
+[![Terraform CI & Security Scanning](https://github.com/DustyStudy/ai-terraform-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/DustyStudy/ai-terraform-toolkit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Terraform](https://img.shields.io/badge/terraform-%3E%3D1.7-844FBA)](https://www.terraform.io/)
+
 AI-assisted Terraform toolkit for managing multi-account AWS organizations. Reusable,
 security-hardened modules plus Claude Code / Gemini integration (context files, custom commands,
 and a review subagent) so teams can provision and manage infrastructure safely without needing
@@ -16,6 +20,41 @@ existing code without fully understanding it. This repo tries to close that gap 
 2. **AI assistant integration** (`CLAUDE.md`, `GEMINI.md`, custom commands, a review subagent) so
    someone can describe what they need in plain English and get code that already follows this
    repo's conventions — reviewed by CI and a second AI pass before it's ever applied.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph bootstrap_group ["bootstrap/ (run once per org)"]
+        B["S3 + DynamoDB<br/>remote state backend"]
+    end
+
+    subgraph lz_group ["landing-zone/ (run per AWS account)"]
+        LZ["landing-zone root config"]
+    end
+
+    subgraph modules_group ["modules/"]
+        AB["account-baseline<br/>CloudTrail · Config · GuardDuty · SCP attach"]
+        VPC["vpc-baseline<br/>VPC · subnets · flow logs"]
+        S3["s3-secure-bucket<br/>encrypted · access-blocked bucket"]
+        SSO["iam-identity-center-permission-set<br/>SSO permission sets"]
+    end
+
+    CI["CI: fmt · tflint · terraform test<br/>Checkov · Trivy · Terrascan · Gitleaks"]
+    AI["Claude Code / Gemini CLI<br/>slash commands + review subagent"]
+
+    B -- "state backend for" --> LZ
+    LZ --> AB
+    LZ --> VPC
+    LZ --> S3
+    LZ --> SSO
+    CI -. "gates every PR touching" .-> modules_group
+    AI -. "generates/reviews changes to" .-> modules_group
+```
+
+`bootstrap/` runs once to stand up remote state; `landing-zone/` composes the four modules to
+provision/configure one AWS account; every module change is gated by CI's scanning stack and can
+be generated or reviewed through the Claude Code / Gemini integration described below.
 
 ## Repo structure
 
@@ -159,6 +198,14 @@ deployed `landing-zone` and opens a GitHub issue (tagged `drift`) if deployed in
 diverged from what's in Git — e.g. a manual console change. Like the cost job, it's inert until
 configured: it needs an `AWS_ROLE_ARN` secret and a few backend-config repo variables. See the
 comment block at the top of that workflow file for the full setup checklist.
+
+## Versioning
+
+Module usage examples reference `?ref=v1.0.0` — tag releases (`git tag -a v1.0.0 -m "..."` then
+`git push origin v1.0.0`) whenever a module's interface changes, and bump the ref in each module's
+README to match. Consumers pulling from outside this repo should always pin a tag, not `main` —
+see each module's "Usage" section for the relative-path alternative used by in-repo callers like
+`landing-zone/`.
 
 ## License
 
